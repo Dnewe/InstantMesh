@@ -99,12 +99,16 @@ def select_syncdreamer_views(syncdreamer_grid: Image.Image) -> torch.Tensor:
     return tensor
 
 def load_syncdreamer():
+    syncdreamer_root = "/content/SyncDreamer"
     try:
-        sys.path.append("/content/SyncDreamer")
+        sys.path.append(syncdreamer_root)
         from generate import load_model
-        cfg = "/content/SyncDreamer/configs/syncdreamer.yaml"
-        ckpt = "/content/SyncDreamer/ckpt/syncdreamer-pretrain.ckpt"
+        cfg = f"{syncdreamer_root}/configs/syncdreamer.yaml"
+        ckpt = f"{syncdreamer_root}/ckpt/syncdreamer-pretrain.ckpt"
+        old_cwd = os.getcwd()
+        os.chdir(syncdreamer_root) # to resolve relative paths insie the model's init
         model = load_model(cfg, ckpt)
+        os.chdir(old_cwd)
         return model
     except ImportError as e:
         raise ImportError(
@@ -251,12 +255,42 @@ for idx, image_file in enumerate(input_files):
         images = rearrange(images, 'c (n h) (m w) -> (n m) c h w', n=3, m=2)
 
     elif args.diffusion_model == 'syncdreamer':
+        sys.path.append("/content/SyncDreamer")
+        from ldm.util import prepare_inputs
+
         with torch.no_grad():
-            output_grid = syncdreamer_model.generate(
-                input_image,
+            data = prepare_inputs(image_file, elevation=30)
+
+            for k, v in data.items():
+                data[k] = v.unsqueeze(0).cuda()
+                data[k] = torch.repeat_interleave(data[k], 1, dim=0)
+
+            x_sample = syncdreamer_model.sample(
+                data,
                 cfg_scale=2.0,
-                elevation=30,
-                sample_num=1,
+                batch_view_num=8,
+            )
+
+            x_sample = (torch.clamp(x_sample, max=1.0, min=-1.0) + 1) * 0.5
+
+            x_sample = (
+                x_sample.permute(0, 1, 3, 4, 2)
+                .cpu()
+                .numpy()
+                * 255
+            ).astype(np.uint8)
+
+            # x_sample shape:
+            # [B, 16, H, W, 3]
+
+            views = [
+                Image.fromarray(x_sample[0, i])
+                for i in range(16)
+            ]
+
+            # Save horizontal grid
+            output_grid = Image.fromarray(
+                np.concatenate([x_sample[0, i] for i in range(16)], axis=1)
             )
         output_grid.save(os.path.join(image_path, f'{name}_syncdreamer_grid.png'))
         images = select_syncdreamer_views(output_grid)
