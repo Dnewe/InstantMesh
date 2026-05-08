@@ -12,6 +12,7 @@ from einops import rearrange, repeat
 from tqdm import tqdm
 from huggingface_hub import hf_hub_download
 from diffusers import DiffusionPipeline, EulerAncestralDiscreteScheduler
+from contextlib import contextmanager
 
 from src.utils.train_util import instantiate_from_config
 from src.utils.camera_util import (
@@ -22,10 +23,23 @@ from src.utils.camera_util import (
 from src.utils.mesh_util import save_obj, save_obj_with_mtl
 from src.utils.infer_util import remove_background, resize_foreground, save_video
 
+sys.path.append("/content/SyncDreamer")
+from ldm.util import prepare_inputs
+from generate import load_model
+
 # ============================================================
 #  OPTION A — Zero123++ v1.2 avec vs sans UNet fine-tuné
 #  OPTION B — SyncDreamer avec adaptateur 16→6 vues
 # ============================================================
+
+@contextmanager
+def cd(path):
+    prev = os.getcwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(prev)
 
 def get_render_cameras(batch_size=1, M=120, radius=4.0, elevation=20.0, is_flexicubes=False):
     c2ws = get_circular_camera_poses(M=M, radius=radius, elevation=elevation)
@@ -101,14 +115,10 @@ def select_syncdreamer_views(syncdreamer_grid: Image.Image) -> torch.Tensor:
 def load_syncdreamer():
     syncdreamer_root = "/content/SyncDreamer"
     try:
-        sys.path.append(syncdreamer_root)
-        from generate import load_model
         cfg = f"{syncdreamer_root}/configs/syncdreamer.yaml"
         ckpt = f"{syncdreamer_root}/ckpt/syncdreamer-pretrain.ckpt"
-        old_cwd = os.getcwd()
-        os.chdir(syncdreamer_root) # to resolve relative paths insie the model's init
-        model = load_model(cfg, ckpt)
-        os.chdir(old_cwd)
+        with cd(syncdreamer_root):
+            model = load_model(cfg, ckpt)
         return model
     except ImportError as e:
         raise ImportError(
@@ -255,10 +265,7 @@ for idx, image_file in enumerate(input_files):
         images = rearrange(images, 'c (n h) (m w) -> (n m) c h w', n=3, m=2)
 
     elif args.diffusion_model == 'syncdreamer':
-        sys.path.append("/content/SyncDreamer")
-        from ldm.util import prepare_inputs
-
-        with torch.no_grad():
+        with cd("/content/SyncDreamer"), torch.no_grad():
             data = prepare_inputs(image_file, elevation=30)
 
             for k, v in data.items():
