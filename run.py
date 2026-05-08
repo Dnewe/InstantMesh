@@ -266,7 +266,7 @@ for idx, image_file in enumerate(input_files):
 
     elif args.diffusion_model == 'syncdreamer':
         with cd("/content/SyncDreamer"), torch.no_grad():
-            data = prepare_inputs(image_file, elevation=30)
+            data = prepare_inputs(image_file, elevation_input=30)
 
             for k, v in data.items():
                 data[k] = v.unsqueeze(0).cuda()
