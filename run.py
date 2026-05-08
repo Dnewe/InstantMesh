@@ -1,4 +1,5 @@
 import os
+import sys
 import argparse
 import numpy as np
 import torch
@@ -99,16 +100,18 @@ def select_syncdreamer_views(syncdreamer_grid: Image.Image) -> torch.Tensor:
 
 def load_syncdreamer():
     try:
-        from syncdreamer import SyncDreamer
-        model = SyncDreamer.load_from_checkpoint("ckpt/syncdreamer-pretrain.ckpt")
-        model.eval()
+        sys.path.append("/content/SyncDreamer")
+        from generate import load_model
+        cfg = "/content/SyncDreamer/configs/syncdreamer.yaml"
+        ckpt = "/content/SyncDreamer/ckpt/syncdreamer-pretrain.ckpt"
+        model = load_model(cfg, ckpt)
         return model
-    except ImportError:
+    except ImportError as e:
         raise ImportError(
             "SyncDreamer non installé. "
             "Cloner https://github.com/liuyuan-pal/SyncDreamer "
             "et placer le ckpt dans ckpt/syncdreamer-pretrain.ckpt"
-        )
+        ) from e
 
 ###############################################################################
 # Arguments
