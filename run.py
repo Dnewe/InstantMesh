@@ -123,7 +123,6 @@ def load_syncdreamer():
             config = OmegaConf.load(cfg)
             state_dict = torch.load(ckpt,map_location='cpu')['state_dict']
             model = instantiate_from_config(config.model)
-            model._init_schedule()
             model.load_state_dict(state_dict,strict=True)
             model = model.cuda().eval()
             #model = load_model(cfg, ckpt)
@@ -280,7 +279,7 @@ for idx, image_file in enumerate(input_files):
                 data[k] = v.unsqueeze(0).cuda()
                 data[k] = torch.repeat_interleave(data[k], 1, dim=0)
 
-            sampler = SyncDDIMSampler(model, 50)
+            sampler = SyncDDIMSampler(syncdreamer_model, 50)
 
             x_sample = syncdreamer_model.sample(
                 sampler, 
