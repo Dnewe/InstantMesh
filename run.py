@@ -123,6 +123,7 @@ def load_syncdreamer():
             config = OmegaConf.load(cfg)
             state_dict = torch.load(ckpt,map_location='cpu')['state_dict']
             model = instantiate_from_config(config.model)
+            model._init_schedule()
             model.load_state_dict(state_dict,strict=True)
             model = model.cuda().eval()
             #model = load_model(cfg, ckpt)
