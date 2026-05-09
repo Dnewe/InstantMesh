@@ -23,7 +23,7 @@ from src.utils.camera_util import (
 from src.utils.mesh_util import save_obj, save_obj_with_mtl
 from src.utils.infer_util import remove_background, resize_foreground, save_video
 
-syncdreamer_root = "/kaggle/working/SyncDreamer"
+syncdreamer_root = "/content/SyncDreamer"
 sys.path.append(syncdreamer_root)
 from ldm.util import prepare_inputs
 from generate import load_model
