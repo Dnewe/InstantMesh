@@ -4,6 +4,7 @@ import argparse
 import numpy as np
 import torch
 import rembg
+import gc
 from PIL import Image
 from torchvision.transforms import v2
 from pytorch_lightning import seed_everything
@@ -207,25 +208,6 @@ elif args.diffusion_model == 'syncdreamer':
     syncdreamer_model = syncdreamer_model.to(device)
     print('[Diffusion] SyncDreamer chargé ✓')
 
-print('Loading reconstruction model ...')
-model = instantiate_from_config(model_config)
-if os.path.exists(infer_config.model_path):
-    model_ckpt_path = infer_config.model_path
-else:
-    model_ckpt_path = hf_hub_download(
-        repo_id="TencentARC/InstantMesh",
-        filename=f"{config_name.replace('-', '_')}.ckpt",
-        repo_type="model"
-    )
-state_dict = torch.load(model_ckpt_path, map_location='cpu')['state_dict']
-state_dict = {k[14:]: v for k, v in state_dict.items() if k.startswith('lrm_generator.')}
-model.load_state_dict(state_dict, strict=True)
-model = model.to(device)
-
-if IS_FLEXICUBES:
-    model.init_flexicubes_geometry(device, fovy=30.0)
-model = model.eval()
-
 output_subfolder = f"{config_name}_{args.diffusion_model}"
 image_path = os.path.join(args.output_path, output_subfolder, 'images')
 mesh_path  = os.path.join(args.output_path, output_subfolder, 'meshes')
@@ -325,6 +307,28 @@ if syncdreamer_model is not None:
 ###############################################################################
 input_cameras = get_zero123plus_input_cameras(batch_size=1, radius=4.0*args.scale).to(device)
 chunk_size = 20 if IS_FLEXICUBES else 1
+
+gc.collect()
+torch.cuda.empty_cache()
+
+print('Loading reconstruction model ...')
+model = instantiate_from_config(model_config)
+if os.path.exists(infer_config.model_path):
+    model_ckpt_path = infer_config.model_path
+else:
+    model_ckpt_path = hf_hub_download(
+        repo_id="TencentARC/InstantMesh",
+        filename=f"{config_name.replace('-', '_')}.ckpt",
+        repo_type="model"
+    )
+state_dict = torch.load(model_ckpt_path, map_location='cpu')['state_dict']
+state_dict = {k[14:]: v for k, v in state_dict.items() if k.startswith('lrm_generator.')}
+model.load_state_dict(state_dict, strict=True)
+model = model.to(device)
+
+if IS_FLEXICUBES:
+    model.init_flexicubes_geometry(device, fovy=30.0)
+model = model.eval()
 
 for idx, sample in enumerate(outputs):
     name = sample['name']
