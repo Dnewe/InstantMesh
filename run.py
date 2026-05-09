@@ -308,6 +308,8 @@ if syncdreamer_model is not None:
 input_cameras = get_zero123plus_input_cameras(batch_size=1, radius=4.0*args.scale).to(device)
 chunk_size = 20 if IS_FLEXICUBES else 1
 
+syncdreamer_model = None
+sampler = None
 gc.collect()
 torch.cuda.empty_cache()
 
