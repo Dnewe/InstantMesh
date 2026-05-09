@@ -27,6 +27,7 @@ syncdreamer_root = "/content/SyncDreamer"
 sys.path.append(syncdreamer_root)
 from ldm.util import prepare_inputs
 from generate import load_model
+from ldm.models.diffusion.sync_dreamer import SyncDDIMSampler
 
 # ============================================================
 #  OPTION A — Zero123++ v1.2 avec vs sans UNet fine-tuné
@@ -273,10 +274,13 @@ for idx, image_file in enumerate(input_files):
                 data[k] = v.unsqueeze(0).cuda()
                 data[k] = torch.repeat_interleave(data[k], 1, dim=0)
 
+            sampler = SyncDDIMSampler(model, 50)
+
             x_sample = syncdreamer_model.sample(
+                sampler, 
                 data,
                 cfg_scale=2.0,
-                batch_view_num=8,
+                batch_view_num=1 ,
             )
 
             x_sample = (torch.clamp(x_sample, max=1.0, min=-1.0) + 1) * 0.5
