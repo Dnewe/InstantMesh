@@ -120,7 +120,12 @@ def load_syncdreamer():
         cfg = f"{syncdreamer_root}/configs/syncdreamer.yaml"
         ckpt = f"{syncdreamer_root}/ckpt/syncdreamer-pretrain.ckpt"
         with cd(syncdreamer_root):
-            model = load_model(cfg, ckpt)
+            config = OmegaConf.load(cfg)
+            state_dict = torch.load(ckpt,map_location='cpu')['state_dict']
+            model = instantiate_from_config(config.model)
+            model.load_state_dict(state_dict,strict=True)
+            model = model.cuda().eval()
+            #model = load_model(cfg, ckpt)
         return model
     except ImportError as e:
         raise ImportError(
