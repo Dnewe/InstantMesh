@@ -23,7 +23,8 @@ from src.utils.camera_util import (
 from src.utils.mesh_util import save_obj, save_obj_with_mtl
 from src.utils.infer_util import remove_background, resize_foreground, save_video
 
-sys.path.append("/content/SyncDreamer")
+syncdreamer_root = "/kaggle/working/SyncDreamer"
+sys.path.append(syncdreamer_root)
 from ldm.util import prepare_inputs
 from generate import load_model
 
@@ -113,7 +114,7 @@ def select_syncdreamer_views(syncdreamer_grid: Image.Image) -> torch.Tensor:
     return tensor
 
 def load_syncdreamer():
-    syncdreamer_root = "/content/SyncDreamer"
+    
     try:
         cfg = f"{syncdreamer_root}/configs/syncdreamer.yaml"
         ckpt = f"{syncdreamer_root}/ckpt/syncdreamer-pretrain.ckpt"
@@ -265,7 +266,7 @@ for idx, image_file in enumerate(input_files):
         images = rearrange(images, 'c (n h) (m w) -> (n m) c h w', n=3, m=2)
 
     elif args.diffusion_model == 'syncdreamer':
-        with cd("/content/SyncDreamer"), torch.no_grad():
+        with cd(syncdreamer_root), torch.no_grad():
             data = prepare_inputs(image_file, elevation_input=30)
 
             for k, v in data.items():
